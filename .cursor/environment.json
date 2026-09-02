@@ -1,0 +1,17 @@
+{
+  "name": "nodejs-goof",
+  "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh",
+  "terminals": [
+    {
+      "name": "goof",
+      "command": "npm start"
+    }
+  ],
+  "ports": [
+    {
+      "name": "web",
+      "port": 3001
+    }
+  ]
+}
