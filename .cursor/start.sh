@@ -19,6 +19,23 @@ wait_for_port() {
   return 1
 }
 
+# MySQL opens its TCP port while still initializing its data directory on first
+# boot, so a bare port check is not enough. Wait until the server can actually
+# answer queries before returning, otherwise the app connects too early, fails
+# to seed the users table, and crashes on the first /users or /login request.
+wait_for_mysql() {
+  local tries="${1:-120}"
+  for _ in $(seq 1 "$tries"); do
+    if sudo docker exec goof-mysql mysqladmin ping -uroot -proot --silent >/dev/null 2>&1; then
+      echo "MySQL is ready to serve queries"
+      return 0
+    fi
+    sleep 1
+  done
+  echo "WARNING: MySQL did not become query-ready in time" >&2
+  return 1
+}
+
 # --- Ensure the Docker daemon is running ---
 if ! sudo docker info >/dev/null 2>&1; then
   sudo rm -f /var/run/docker.pid
@@ -44,6 +61,7 @@ fi
 
 # --- Wait for the databases so the app connects cleanly on first launch ---
 wait_for_port 127.0.0.1 27017 "MongoDB" 60 || true
-wait_for_port 127.0.0.1 3306 "MySQL" 120 || true
+wait_for_port 127.0.0.1 3306 "MySQL (port)" 120 || true
+wait_for_mysql 180 || true
 
 echo "start.sh complete"
